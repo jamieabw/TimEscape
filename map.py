@@ -18,10 +18,11 @@ class Map:
             cell.tileType = TileType.BLOCK
         for cell in self.mapGrid[98]:
             cell.tileType = TileType.BLOCK
-        self.mapGrid[99][30].tileType = TileType.EMPTY
-        self.mapGrid[98][30].tileType = TileType.EMPTY
-        self.mapGrid[99][29].tileType = TileType.EMPTY
-        self.mapGrid[98][29].tileType = TileType.EMPTY
+
+        for i in range(0, len(self.mapGrid), 3):
+            for j in range(0, len(self.mapGrid[i]), 4):
+                self.mapGrid[j][i].tileType = TileType.BLOCK
+        
 
     @override
     def __str__(self):

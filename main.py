@@ -60,7 +60,7 @@ class TestGame:
                 pygame.quit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE and self.player.isOnFloor:
                     self.player.y -= 10
                     self.downVel = -10
 
@@ -112,6 +112,7 @@ class TestGame:
         self.player.x += self.moveVel
         self.checkXCollision()
         self.downVel += (DOWN_ACCELERATION / FPS)
+        self.player.y += self.downVel
         self.checkYCollision()
 
         if self.player.isOnFloor:
@@ -119,8 +120,7 @@ class TestGame:
             print("yes")
         print(self.downVel)
 
-        self.player.y += self.downVel
-        self.player.x += self.moveVel
+        #self.player.x += self.moveVel
         # the following is camera physics
         self.cameraX = self.player.x - self.screen.get_width() // 2
         self.cameraX = min(max(0, self.cameraX), Map.TILE_SIZE * Map.MAP_TILE_SIZE - self.screen.get_width())
@@ -167,7 +167,7 @@ class TestGame:
 
     def checkYCollision(self):
         tiles = self.getTilesToCheck()
-        for tile in tiles[2:4]:
+        for tile in tiles:
             if tile.tileType.name == "BLOCK" and self.player.getRect().colliderect(tile.getRect()):
                 if self.downVel >= 0: # if falling
                     self.player.y = tile.y - self.player.height + 1 # this fixes the jittering by planting the player 1px into ground
