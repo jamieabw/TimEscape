@@ -1,4 +1,3 @@
-from typing import override
 from tile import Tile
 from tile import TileType
 
@@ -32,7 +31,6 @@ class Map:
     """
     debugging function to print out the grid in terminal
     """
-    @override
     def __str__(self):
         result = ""
         for row in self.mapGrid:
