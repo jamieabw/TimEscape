@@ -7,4 +7,4 @@ def main(debug=False):
     SceneManager(Menu).beginScene(menu=True)
 
 if __name__ == "__main__":
-    main()
+    main() 

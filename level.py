@@ -119,6 +119,7 @@ class Level:
 
         self.player.x += self.moveVel
         self.checkXCollision()
+
         self.downVel += (DOWN_ACCELERATION / FPS)
         self.player.y += self.downVel
         self.checkYCollision()
