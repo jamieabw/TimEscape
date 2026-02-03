@@ -9,7 +9,7 @@ class Tile:
         self.x = self.tileX * Tile.TILE_SIZE
         self.y = self.tileY * Tile.TILE_SIZE
         self.tileType = TileType.EMPTY
-        self.debuggingColors = (255,0,randint(0,255))
+        self.debuggingColors = (50,0,randint(0,255))
         # i believe these will be the top left corner of each cell?
 
     def getRect(self):

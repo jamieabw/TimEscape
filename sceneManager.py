@@ -9,7 +9,7 @@ fluidly without annoying repeated code
 class SceneManager:
     def __init__(self, initialScene):
         self.currentScene = initialScene
-        self.screen = pygame.display.set_mode((1000,800))
+        self.screen = pygame.display.set_mode((1200,1000))
          
     def changeScene(self, newScene):
         self.currentScene = newScene

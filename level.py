@@ -1,6 +1,6 @@
 import pygame # type: ignore
 import random
-from map import Map
+from map import Map, SPAWN_TILE_X, SPAWN_TILE_Y
 from player import Player
 from tile import TileType
 
@@ -21,12 +21,19 @@ TODO:
 # constants
 FPS = 60
 DOWN_ACCELERATION = 10
-MOVEMENT_ACCELERATION = 1.5
-FRICTION_ACCELERATION = 1.5
-MAX_VELOCITY = 1
+JUMP_ACCELERATION = -10
+MOVEMENT_ACCELERATION = 20
+FRICTION_MULTIPLIER = 0.9 # yes this is hardcoded, leave me alomne
+MAX_DOWN_VELOCITY = 25
+MAX_SIDEWAY_VELOCITY = 10
+MIN_MOVE_SPEED = 0
+TIME_TO_REACH_MAX_MOV = MAX_SIDEWAY_VELOCITY / MOVEMENT_ACCELERATION
+
+
 
 class Level:
     def __init__(self):
+        self.level = 0
         self.delta = 0
         self.tilesToCheck = ()
         self.cameraX, self.cameraY = (0,0)
@@ -47,7 +54,8 @@ class Level:
     start a new map and reset all the player attributes which are not global to all maps
     """
     def startMap(self):
-        self.player = Player(200, 800)
+        self.level += 1
+        self.player = Player(SPAWN_TILE_X * Map.TILE_SIZE, SPAWN_TILE_Y * Map.TILE_SIZE)
         self.map = Map()
         self.map.createMapGrid()
         self.downVel = 0
@@ -68,20 +76,24 @@ class Level:
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and self.airTimer < 6:
-                    self.player.y -= 10
-                    self.downVel = -10
+                    self.downVel = JUMP_ACCELERATION
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_d]:
+            if self.moveVel < 0:
+                self.moveVel = 0
+            self.moveVel = min(max(self.moveVel + (MOVEMENT_ACCELERATION / FPS), MIN_MOVE_SPEED), MAX_SIDEWAY_VELOCITY)
+        if keys[pygame.K_a]:
+            if self.moveVel > 0:
+                self.moveVel = 0
+            self.moveVel = max(min(self.moveVel - (MOVEMENT_ACCELERATION / FPS), -MIN_MOVE_SPEED), -MAX_SIDEWAY_VELOCITY)
+        if not ((pygame.key.get_pressed()[pygame.K_a] or pygame.key.get_pressed()[pygame.K_d])):
+            if self.moveVel > 0:
+                self.moveVel = max(0, self.moveVel * FRICTION_MULTIPLIER)
+            elif self.moveVel < 0:
+                self.moveVel = min(0, self.moveVel * FRICTION_MULTIPLIER)
 
 
-
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_d]:
-                if self.moveVel < 0:
-                    self.moveVel = 0
-                self.moveVel += (10 / FPS)
-            if keys[pygame.K_a]:
-                if self.moveVel > 0:
-                    self.moveVel = 0
-                self.moveVel -= (10 / FPS)
 
 
     """
@@ -89,9 +101,9 @@ class Level:
     """
     def runLoop(self):
         while self.running:
+            self.eventLoop()
             self.update()
             self.render()
-            self.eventLoop()
             self.clock.tick(FPS)
 
     """
@@ -121,22 +133,14 @@ class Level:
             self.airTimer = 0
         else:
             self.airTimer += 1
-        """ self.playerMovement = [0,0]
-        self.playerMovement[0] += self.moveVel
-        self.playerMovement[1] += self.downVel"""
-
 
         self.player.x += self.moveVel
         self.newCollisionLogicX()
-        #self.checkXCollision()
 
-        self.downVel = min(MAX_VELOCITY, self.downVel + (DOWN_ACCELERATION / FPS))
+        self.downVel = min(MAX_DOWN_VELOCITY, self.downVel + (DOWN_ACCELERATION / FPS))
         self.player.y += self.downVel
         self.newCollisionLogicY()
-        #self.checkYCollision()
 
-
-        #self.player.x += self.moveVel
         # the following is camera physics
         self.cameraX = self.player.x - self.screen.get_width() // 2
         self.cameraX = min(max(0, self.cameraX), Map.TILE_SIZE * Map.MAP_TILE_SIZE - self.screen.get_width())
@@ -180,10 +184,6 @@ class Level:
         return [topLeft, topRight, bottomRight, bottomLeft]
     
 
-
-
-
-
     """
     COLLISION BUG URGENT:
     - when velocity is negative (Acting upwards), and a collision with a side of a block, the player
@@ -192,11 +192,15 @@ class Level:
     """
 
 
+
+    """
+    deals with collisions on the x-axis
+    """
     def newCollisionLogicX(self):
         self.collisionTypes["left"] = False
         self.collisionTypes["right"] = False
         for tile in self.getTilesToCheck():
-            if tile.tileType.name != "EMPTY":
+            if tile.tileType.name == "BLOCK":
                 if self.moveVel > 0:
                     self.player.x = tile.x - self.player.width # self.player.left = tile.right
                     self.collisionTypes["right"] = True
@@ -205,13 +209,22 @@ class Level:
                     self.player.x = tile.x + Map.TILE_SIZE
                     self.collisionTypes["left"] = True
                     self.moveVel = 0
+            elif tile.tileType.name == "SPIKE":
+                self.reset()
+
+            elif tile.tileType.name == "EXIT":
+                self.proceedToNextLevel()
 
 
+
+    """
+    deals with collisions on the y-axis
+    """
     def newCollisionLogicY(self):
         self.collisionTypes["top"] = False
         self.collisionTypes["bottom"] = False
         for tile in self.getTilesToCheck():
-            if tile.tileType.name != "EMPTY":
+            if tile.tileType.name == "BLOCK":
                 if self.downVel > 0:
                     self.player.y = tile.y - self.player.height
                     self.collisionTypes["bottom"] = True
@@ -220,6 +233,14 @@ class Level:
                     self.player.y = tile.y + Map.TILE_SIZE
                     self.collisionTypes["top"] = True
                     self.downVel = 0
+            elif tile.tileType.name == "SPIKE":
+                self.reset()
+
+            elif tile.tileType.name == "EXIT":
+                self.proceedToNextLevel()
+
+    def proceedToNextLevel(self):
+        self.startMap()
         
 
 
@@ -227,4 +248,4 @@ class Level:
     when player dies to spike or entity, reset everything
     """
     def reset(self):
-        self.startMap()
+        self.running = False
