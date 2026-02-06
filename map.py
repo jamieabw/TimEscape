@@ -1,20 +1,22 @@
 from tile import Tile
 from tile import TileType
 from island import Island
-from random import randrange, randint, choice
+from random import randrange, randint, choice, seed
 
 
-X_TILES_GAP = 6 # maximum 14 tiles away x
-Y_TILES_GAP = 1
+X_TILES_GAP = 4 # maximum 14 tiles away x
+Y_TILES_GAP = 3
 SPAWN_TILE_X = 1
 SPAWN_TILE_Y = 97
 
 class Map:
     TILE_SIZE = Tile.TILE_SIZE
     MAP_TILE_SIZE = 100 # 800x800 tile map, so 6400x6400 pixel map
-    def __init__(self):
+    def __init__(self, mapSeed):
         self.mapGrid = []
         self.islands = []
+        seed(mapSeed)
+        
         
 
     """
@@ -34,9 +36,9 @@ class Map:
             self.mapGrid[i][0].tileType = TileType.BLOCK
             self.mapGrid[i][Map.MAP_TILE_SIZE-1].tileType = TileType.BLOCK
 
-        self.mapGrid[Map.MAP_TILE_SIZE - 2][Map.MAP_TILE_SIZE - 2].tileType = TileType.EXIT
+        #self.mapGrid[Map.MAP_TILE_SIZE - 2][Map.MAP_TILE_SIZE - 2].tileType = TileType.EXIT
         self.populateWithIslands()
-        self.fillAmbientIslands()
+        #self.fillAmbientIslands()
         for island in self.islands:
             startTileX = int((island.x - (island.width // 2)) // Map.TILE_SIZE)
             startTileY = int((island.y - (island.height // 2))  // Map.TILE_SIZE)
@@ -56,6 +58,7 @@ class Map:
                         self.mapGrid[y][x].tileType = TileType.BLOCK
                     except IndexError:
                         continue
+        self.generateExit()
         self.populateWithSpikes()
 
 
@@ -65,12 +68,14 @@ class Map:
     Populates the map with path islands
     """
     def populateWithIslands(self):
-        self.islands.append(Island(Map.TILE_SIZE * 10, Map.TILE_SIZE * 96, 4 * Map.TILE_SIZE, 4 * Map.TILE_SIZE))
+        self.islands.append(Island(Map.TILE_SIZE * 10, Map.TILE_SIZE * 97, 4 * Map.TILE_SIZE, 4 * Map.TILE_SIZE))
         for i in range(100):
-            try:
-                self.islands.append(self.createPathIsland(self.islands[-1]))
-            except IndexError:
-                break
+            for attempt in range(5):
+                try:
+                    self.islands.append(self.createPathIsland(self.islands[-1]))
+                    break
+                except IndexError:
+                    break
     
 
 
@@ -104,8 +109,71 @@ class Map:
     Generates an island based on a previous island to ensure a reachable path is created for the player
     """
     def createPathIsland(self, prevIsland):
+        xGap = (X_TILES_GAP + (randrange(4, 9) / 10)) * Map.TILE_SIZE
+        yGap = (Y_TILES_GAP + (randrange(4, 9) / 10)) * Map.TILE_SIZE
+
+        direction = choice([-1, 1, 1, 1, 1])
+
+        width = randint(4, 8) * Map.TILE_SIZE
+        height = randint(4, 6) * Map.TILE_SIZE
+
+        newX = (
+            prevIsland.x
+            + direction * (prevIsland.width // 2 + width // 2)
+            + direction * xGap
+        )
+
+        # top-to-top spacing
+        prevTop = prevIsland.y - (prevIsland.height // 2)
+        newTop = prevTop - yGap
+        newY = newTop + (height // 2)
+
+        island = Island(newX, newY, width, height)
+
+        tileX = int(island.x // Map.TILE_SIZE)
+        tileY = int(island.y // Map.TILE_SIZE)
+        self.mapGrid[tileY][tileX]
+        if tileY < 0 or tileX < 0:
+            raise IndexError
+        if any(self.intersects(island, other, paddingTiles=1) for other in self.islands):
+            raise IndexError
+        
+
+        return island
+
+
+
+
+    """def createPathIsland(self, prevIsland):
+        xGap = (X_TILES_GAP + (randrange(4, 9) / 10)) * Map.TILE_SIZE
+        yGap = (Y_TILES_GAP - (randrange(4,9) / 10)) * Map.TILE_SIZE
+
+        direction = choice([-1, 1, 1, 1, 1])  # -1 = left, 1 = right
+
+        width = randint(4, 10) * Map.TILE_SIZE
+        height = randint(4, 8) * Map.TILE_SIZE
+
+        newX = (
+            prevIsland.x
+            + direction * (prevIsland.width // 2 + width // 2)
+            + direction * xGap
+        )
+
+        newY = prevIsland.y - (prevIsland.height // 2) - (height // 2) - yGap
+
+        island = Island(newX, newY, width, height)
+
+        tileX = int(island.x // Map.TILE_SIZE)
+        tileY = int(island.y // Map.TILE_SIZE)
+        self.mapGrid[tileY][tileX]  # bounds check
+
+        return island"""
+
+    """def createPathIsland(self, prevIsland):
         xGap = (X_TILES_GAP * (randrange(4, 9) / 10)) * Map.TILE_SIZE
         yGap = (Y_TILES_GAP * (randrange(4,9) / 10)) * Map.TILE_SIZE
+        if randint(0,2) == 1:
+            xGap *= -1
         width = randint(4, 10) * Map.TILE_SIZE
         height = randint(4, 8) * Map.TILE_SIZE
         island = Island(prevIsland.x + prevIsland.width + xGap, prevIsland.y - int(prevIsland.height // 2) - yGap, width, height)
@@ -113,7 +181,7 @@ class Map:
         tileX = int(island.x // Map.TILE_SIZE)
         tileY = int(island.y // Map.TILE_SIZE)
         self.mapGrid[tileY][tileX]
-        return island
+        return island"""
     
 
 
@@ -137,6 +205,15 @@ class Map:
                 if self.mapGrid[y][x].tileType == TileType.BLOCK and self.mapGrid[y-1][x].tileType == TileType.EMPTY:
                     if randint(0,12) == 1:
                         self.mapGrid[y-1][x].tileType = TileType.SPIKE
+
+
+    def generateExit(self):
+        finalIsland = self.islands[-1]
+        topOfIsland = finalIsland.y - (finalIsland.height // 2)
+        x = finalIsland.x // Map.TILE_SIZE
+        y = topOfIsland // Map.TILE_SIZE
+        print(topOfIsland, y, x)
+        self.mapGrid[int(y +1)][int(x)].tileType == TileType.EXIT
 
 
         

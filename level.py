@@ -72,7 +72,9 @@ class Level:
     def startMap(self):
         self.level += 1
         self.player = Player(SPAWN_TILE_X * Map.TILE_SIZE, SPAWN_TILE_Y * Map.TILE_SIZE)
-        self.map = Map()
+        seed = random.randint(0,10000000)
+        print(f"MAP SEED: {seed}")
+        self.map = Map(seed)
         self.map.createMapGrid()
         self.generateEnemies()
         self.downVel = 0
@@ -272,6 +274,7 @@ class Level:
                 self.proceedToNextLevel()
 
     def proceedToNextLevel(self):
+        self.__init__()
         self.startMap()
         
 
