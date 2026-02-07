@@ -40,6 +40,8 @@ class Level:
         self.collisionTypes = {"top": False, "bottom":False, "left":False,"right":False}
         self.airTimer =0
         self.timer = 255
+        self.health = 3
+        self.enemyAcceleration = 0
 
 
     # function to start the game
@@ -50,19 +52,24 @@ class Level:
         self.startMap()
         self.runLoop()
 
+    """
+    Generate i enemies in the map
+    """
 
     def generateEnemies(self, enemyCount=10):
         for i in range(enemyCount):
             self.enemies.append(Walker(0,0,50,50,100,self.map.islands, self.map))
 
-    def testRenderEnemies(self):
+
+    """
+    Currently a test function, spawns enemies and checks for collisions, CHANGE THIS 
+    """
+    def renderEnemies(self):
         for enemy in self.enemies:
             if enemy.alive:
                 enemy.movement(self.map, self.delta)
                 tempRect = pygame.Rect(enemy.x - self.cameraX, enemy.y - self.cameraY, enemy.width, enemy.height)
                 pygame.draw.rect(self.screen, (255,255,255), tempRect)
-                if self.player.getRect().colliderect(tempRect.move(self.cameraX, self.cameraY)):
-                    self.reset()
 
                 
 
@@ -101,11 +108,11 @@ class Level:
         if keys[pygame.K_d]:
             if self.moveVel < 0:
                 self.moveVel = 0
-            self.moveVel = min(max(self.moveVel + (MOVEMENT_ACCELERATION * self.delta), MIN_MOVE_SPEED), MAX_SIDEWAY_VELOCITY)
+            self.moveVel = min(self.moveVel + (MOVEMENT_ACCELERATION * self.delta), MAX_SIDEWAY_VELOCITY)
         if keys[pygame.K_a]:
             if self.moveVel > 0:
                 self.moveVel = 0
-            self.moveVel = max(min(self.moveVel - (MOVEMENT_ACCELERATION * self.delta), -MIN_MOVE_SPEED), -MAX_SIDEWAY_VELOCITY)
+            self.moveVel = max(self.moveVel - (MOVEMENT_ACCELERATION * self.delta), -MAX_SIDEWAY_VELOCITY)
         if not ((pygame.key.get_pressed()[pygame.K_a] or pygame.key.get_pressed()[pygame.K_d])):
             if self.moveVel > 0:
                 self.moveVel = max(0, self.moveVel * FRICTION_MULTIPLIER * self.delta * FPS)
@@ -134,6 +141,7 @@ class Level:
         endX   = min(int((self.cameraX + self.screen.get_width()) // (Map.TILE_SIZE - 1)) + 1, 100)
         startY = min(int(self.cameraY // Map.TILE_SIZE), 100)
         endY   = min(int((self.cameraY + self.screen.get_height()) // (Map.TILE_SIZE)) + 1, 100)
+        # utilise above variables to optimise enemy spawning
 
         for y in range(startY, endY):
             for x in range(startX, endX):
@@ -141,15 +149,8 @@ class Level:
                 tempRect.x -= (self.cameraX)
                 tempRect.y -= (self.cameraY)
                 pygame.draw.rect(self.screen, self.map.mapGrid[y][x].getColour(), tempRect)
-
-        """for row in self.map.mapGrid:
-            for tile in row:
-                tempRect = tile.getRect()
-                tempRect.x -= (self.cameraX)
-                tempRect.y -= (self.cameraY)
-                pygame.draw.rect(self.screen, tile.getColour(), tempRect)"""
         pygame.draw.rect(self.screen, self.player.getColour(), self.player.getRect().move(-self.cameraX, -self.cameraY))
-        self.testRenderEnemies()
+        self.renderEnemies()
         pygame.display.flip()
     
     """
@@ -165,6 +166,8 @@ class Level:
             self.airTimer = 0
         else:
             self.airTimer += self.delta
+        self.moveVel += self.enemyAcceleration
+        self.enemyAcceleration *= FRICTION_MULTIPLIER
 
         self.player.x += self.moveVel * self.delta
         self.newCollisionLogicX()
@@ -219,18 +222,10 @@ class Level:
     
 
     """
-    COLLISION BUG URGENT:
-    - when velocity is negative (Acting upwards), and a collision with a side of a block, the player
-    will teleport to the bottom of the object, this seems to the reverse of the clipping to the top of an object
-    issue which is experienced during falling, this needs to be urgently fixed as makes gameplay terrible
-    """
-
-
-
-    """
     deals with collisions on the x-axis
     """
     def newCollisionLogicX(self):
+        self.enemyCollisionLogicX()
         self.collisionTypes["left"] = False
         self.collisionTypes["right"] = False
         for tile in self.getTilesToCheck():
@@ -249,6 +244,38 @@ class Level:
             elif tile.tileType.name == "EXIT":
                 self.proceedToNextLevel()
 
+
+    """
+    Handles enemy collisions with the player, reduces health and check whether the player is now dead
+    """
+    def enemyCollisionLogicX(self):
+        self.collisionTypes["left"] = False
+        self.collisionTypes["right"] = False
+        for enemy in self.enemies:
+            if self.player.getRect().colliderect(enemy.getRect()):
+                if self.moveVel < 0.5 * FPS and self.moveVel > -0.5 * FPS:
+                    print(self.moveVel)
+                    if enemy.vel > 0: # enemy moving right
+                        self.player.x = enemy.x + enemy.width + 32
+                        self.collisionTypes["left"] = True
+                        self.enemyAcceleration = 2 * FPS
+                    else:
+                        self.player.x = enemy.x - self.player.width - 32
+                        self.collisionTypes["right"] = True
+                        self.enemyAcceleration = -2 * FPS
+                elif self.moveVel > -0.5 * FPS:
+                    self.player.x = enemy.x - self.player.width - 32
+                    self.collisionTypes["right"] = True
+                    self.enemyAcceleration = -2 * FPS
+                elif self.moveVel < 0.5 * FPS:
+                    self.player.x = enemy.x + enemy.width + 32
+                    self.collisionTypes["left"] = True
+                    self.enemyAcceleration = 2 * FPS
+
+                self.health -= 1
+                if self.health == 0:
+                    self.reset()
+                self.moveVel = 0
 
 
     """

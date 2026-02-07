@@ -20,7 +20,7 @@ class Map:
         
 
     """
-    currently a temp function to draw a random hardcoded map, will eventually generate a random map
+    generates the map grid, populates the map with islands and spikes
     """
     def createMapGrid(self):
         for y in range(Map.MAP_TILE_SIZE):
@@ -82,7 +82,7 @@ class Map:
 
 
     """
-    Generates islands to fill the empty space in the map, some may be unreachable by the player
+    Generates random islands to fill the empty space in the map, some may be unreachable by the player
     """
     def fillAmbientIslands(self, count=250):
         counter = 0
@@ -148,48 +148,6 @@ class Map:
 
 
 
-
-    """def createPathIsland(self, prevIsland):
-        xGap = (X_TILES_GAP + (randrange(4, 9) / 10)) * Map.TILE_SIZE
-        yGap = (Y_TILES_GAP - (randrange(4,9) / 10)) * Map.TILE_SIZE
-
-        direction = choice([-1, 1, 1, 1, 1])  # -1 = left, 1 = right
-
-        width = randint(4, 10) * Map.TILE_SIZE
-        height = randint(4, 8) * Map.TILE_SIZE
-
-        newX = (
-            prevIsland.x
-            + direction * (prevIsland.width // 2 + width // 2)
-            + direction * xGap
-        )
-
-        newY = prevIsland.y - (prevIsland.height // 2) - (height // 2) - yGap
-
-        island = Island(newX, newY, width, height)
-
-        tileX = int(island.x // Map.TILE_SIZE)
-        tileY = int(island.y // Map.TILE_SIZE)
-        self.mapGrid[tileY][tileX]  # bounds check
-
-        return island"""
-
-    """def createPathIsland(self, prevIsland):
-        xGap = (X_TILES_GAP * (randrange(4, 9) / 10)) * Map.TILE_SIZE
-        yGap = (Y_TILES_GAP * (randrange(4,9) / 10)) * Map.TILE_SIZE
-        if randint(0,2) == 1:
-            xGap *= -1
-        width = randint(4, 10) * Map.TILE_SIZE
-        height = randint(4, 8) * Map.TILE_SIZE
-        island = Island(prevIsland.x + prevIsland.width + xGap, prevIsland.y - int(prevIsland.height // 2) - yGap, width, height)
-        #island = Island(prevIsland.x +  xGap, prevIsland.y -  yGap, width, height)
-        tileX = int(island.x // Map.TILE_SIZE)
-        tileY = int(island.y // Map.TILE_SIZE)
-        self.mapGrid[tileY][tileX]
-        return island"""
-    
-
-
     """
     Check if two objects are intersecting
     """
@@ -204,6 +162,9 @@ class Map:
         )
     
 
+    """
+    Generates spikes throughout the map ontop of random blocks
+    """
     def populateWithSpikes(self):
         for y in range(1, Map.MAP_TILE_SIZE):
             for x in range(2, Map.MAP_TILE_SIZE - 1):
@@ -212,6 +173,10 @@ class Map:
                         self.mapGrid[y-1][x].tileType = TileType.SPIKE
 
 
+    """
+    Generates the exit on the second to last island (not the last just incase it is in an awkward position which makes it 
+    too difficult)
+    """
     def generateExit(self):
         finalIsland = self.islands[-2]
         topOfIsland = finalIsland.y - (finalIsland.height // 2)
