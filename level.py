@@ -4,6 +4,7 @@ from map import Map, SPAWN_TILE_X, SPAWN_TILE_Y
 from player import Player
 from tile import TileType
 from walker import Walker
+import json
 
 
 # constants
@@ -16,6 +17,7 @@ MAX_DOWN_VELOCITY = 25 * FPS
 MAX_SIDEWAY_VELOCITY = 10 * FPS
 MIN_MOVE_SPEED = 0
 TIME_TO_REACH_MAX_MOV = MAX_SIDEWAY_VELOCITY / MOVEMENT_ACCELERATION
+INITIAL_TIMER = 100
 
 
 
@@ -23,6 +25,12 @@ class Level:
     def __init__(self, sceneManager):
         self.sceneManager = sceneManager
         self.level = 0
+        with open("data/data.json", "r") as f:
+            self.data = json.load(f)
+        if self.data["multijumpUpgrade"] > 0:
+            self.multijump = 4
+        else:
+            self.multijump = 1
         self.blockImage = pygame.image.load("Assets/blockPLACEHOLDER3.png").convert_alpha()
         self.blockImage = pygame.transform.scale(self.blockImage, (Map.TILE_SIZE, Map.TILE_SIZE))
 
@@ -76,6 +84,8 @@ class Level:
     """
     def startMap(self):
         self.level += 1
+        if self.level > self.data["highestLevel"]:
+            self.data["highestLevel"] = self.level
         self.player = Player(SPAWN_TILE_X * Map.TILE_SIZE, SPAWN_TILE_Y * Map.TILE_SIZE)
         seed = random.randint(0,10000000)
         print(f"MAP SEED: {seed}")
@@ -89,10 +99,11 @@ class Level:
         self.cameraX, self.cameraY = (0,0)
         self.collisionTypes = {"top": False, "bottom":False, "left":False,"right":False}
         self.airTimer =0
-        self.timer = 255
-        self.health = 3
+        self.timer = INITIAL_TIMER
+        self.health = 3 + self.data["healthUpgrade"]
         self.downVel = 0
         self.moveVel = 0
+
 
     
     """
@@ -108,8 +119,23 @@ class Level:
                 exit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and self.airTimer < 0.6: #URGENT CHANGE
+                if event.key == pygame.K_SPACE and self.airTimer < 0.1 * self.multijump: 
                     self.downVel = JUMP_ACCELERATION
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.moveVel > 0: # moving right/facing right
+                    print("facing right")
+                    tempRect = pygame.rect.Rect((self.player.x + self.player.width), (self.player.y), self.player.width * 1.5, self.player.height)
+                    #pygame.draw.rect(self.screen, (255,255,255), tempRect)
+                    self.weaponCollision(tempRect)
+                    pygame.display.flip()
+                    print(tempRect.x, tempRect.y)
+                elif self.moveVel < 0: # moving left / facing left
+                    print("facing left")
+                    tempRect = pygame.rect.Rect((self.player.x -  (1.5 *self.player.width)), (self.player.y), self.player.width * 1.5, self.player.height)
+                    #pygame.draw.rect(self.screen, (255,255,255), tempRect)
+                    self.weaponCollision(tempRect)
+                    pygame.display.flip()
+
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_d]:
@@ -126,7 +152,7 @@ class Level:
             elif self.moveVel < 0:
                 self.moveVel = min(0, self.moveVel * FRICTION_MULTIPLIER * self.delta * FPS)
 
-
+# idea for the weapon, create a rect and check for intersections
 
 
     """
@@ -172,9 +198,11 @@ class Level:
         self.levelText = self.font.render(f"Level {self.level}", True, (255,255,255,0.54))
         self.timerText = self.font.render(f"{round(self.timer)}", True, (255,255,255,0.54))
         self.healthText = self.font.render(f"HP: {self.health}", True, (255,255,255,0.54))
+        self.scoreText = self.font.render(f"Coins: {self.data['coins']}", True, (255,255,255,0.54))
         self.screen.blit(self.levelText, (0,0))
         self.screen.blit(self.timerText, (self.screen.get_width() //2, 0))
         self.screen.blit(self.healthText, (0, self.screen.get_height() - self.healthText.get_height()))
+        self.screen.blit(self.scoreText, (0, self.screen.get_height() - self.healthText.get_height() - self.scoreText.get_height()))
         pygame.display.flip()
     
     """
@@ -186,6 +214,8 @@ class Level:
     """
     def update(self):
         self.timer -= self.delta
+        if self.timer <= 0:
+            self.reset()
         if self.collisionTypes["bottom"]:
             self.airTimer = 0
         else:
@@ -329,7 +359,18 @@ class Level:
                 self.player.x, self.player.y = (SPAWN_TILE_X * Map.TILE_SIZE,SPAWN_TILE_Y* Map.TILE_SIZE) # fixes jumping to double increment level
 
 
+    def weaponCollision(self, weaponRect):
+        collisionIndex = weaponRect.collidelist([enemy.getRect() for enemy in self.enemies])
+        if collisionIndex != -1:
+            self.enemies[collisionIndex].alive = False
+            self.enemies.remove(self.enemies[collisionIndex])
+            self.timer += 5
+            self.data["coins"] += 10
+
+
+
     def proceedToNextLevel(self):
+        self.data["coins"] += INITIAL_TIMER - round(self.timer)
         self.startMap()
         
         
@@ -340,4 +381,6 @@ class Level:
     """
     def reset(self):
         self.running = False
+        with open("data/data.json", "w") as f:
+            json.dump(self.data, f)
         self.sceneManager.changeScene(self.sceneManager.DeathMenu)  

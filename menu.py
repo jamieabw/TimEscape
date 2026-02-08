@@ -3,14 +3,12 @@ import pygame_menu
 class Menu:
     def __init__(self, sceneManager):
         self.customTheme = pygame_menu.themes.THEME_DARK.copy()
-        self.customTheme = pygame_menu.themes.THEME_DARK.copy()
         self.customTheme.background_color = (15, 15, 20)
         self.customTheme.title_background_color = (25, 25, 35)
         self.customTheme.widget_font_color = (220, 220, 220)
         self.customTheme.widget_selection_color = (100, 100, 255)
         self.customTheme.title = False
 
-        # Load 8-bit font
         self.font = pygame_menu.font.FONT_8BIT
         self.customTheme.title_font = self.font
         self.customTheme.widget_font = self.font
