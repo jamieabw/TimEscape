@@ -1,4 +1,4 @@
-from pygame import init
+from pygame import init, mixer
 from mainMenu import MainMenu
 from sceneManager import SceneManager
 from deathMenu import DeathMenu
@@ -8,8 +8,8 @@ import json
 import os
 
 def main():
+    mixer.init()
     init()
-    
     if not os.path.exists("data/data.json"):
         defaultData = {"coins": 0, "highestLevel" : 0, "healthUpgrade":0, "multijumpUpgrade":0}
         with open("data/data.json", "w") as f:
@@ -23,7 +23,6 @@ if __name__ == "__main__":
 
 """
 features to add:
-- particle system?
-- audio
+- particle system
 BUG: when jumping on the exit it double increments the level counter, no idea why
 """

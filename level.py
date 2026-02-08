@@ -43,7 +43,11 @@ class Level:
         self.font = pygame.font.Font("Assets/ThaleahFat.ttf", 64)
         self.background = pygame.image.load("Assets/background2.png").convert_alpha()
         self.background = pygame.transform.scale(self.background, (Map.TILE_SIZE * Map.MAP_TILE_SIZE, Map.TILE_SIZE * Map.MAP_TILE_SIZE))
-
+        self.clockLoopAudio = pygame.mixer.Sound("Assets/clockLoop.wav")
+        self.deathAudio = pygame.mixer.Sound("Assets/death.wav")
+        self.enemyAttackAudio = pygame.mixer.Sound("Assets/enemyAttack.wav")
+        self.playerAttackAudio = pygame.mixer.Sound("Assets/playerAttack.wav")
+        self.jumpAudio = pygame.mixer.Sound("Assets/jump.wav")
 
 
     # function to start the game
@@ -103,6 +107,7 @@ class Level:
         self.health = 3 + self.data["healthUpgrade"]
         self.downVel = 0
         self.moveVel = 0
+        self.clockLoopAudio.play(loops=-1)
 
 
     
@@ -119,22 +124,24 @@ class Level:
                 exit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and self.airTimer < 0.1 * self.multijump: 
+                if event.key == pygame.K_SPACE and self.airTimer < 0.1 * self.multijump:
+                    self.jumpAudio.play()
                     self.downVel = JUMP_ACCELERATION
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.moveVel > 0: # moving right/facing right
                     print("facing right")
                     tempRect = pygame.rect.Rect((self.player.x + self.player.width), (self.player.y), self.player.width * 1.5, self.player.height)
-                    #pygame.draw.rect(self.screen, (255,255,255), tempRect)
+                    self.screen.blit(self.spikeImage, (tempRect.x - self.cameraX, tempRect.y - self.cameraY))
                     self.weaponCollision(tempRect)
                     pygame.display.flip()
                     print(tempRect.x, tempRect.y)
                 elif self.moveVel < 0: # moving left / facing left
                     print("facing left")
                     tempRect = pygame.rect.Rect((self.player.x -  (1.5 *self.player.width)), (self.player.y), self.player.width * 1.5, self.player.height)
-                    #pygame.draw.rect(self.screen, (255,255,255), tempRect)
+                    self.screen.blit(self.spikeImage, (tempRect.x - self.cameraX, tempRect.y - self.cameraY))
                     self.weaponCollision(tempRect)
                     pygame.display.flip()
+                    
 
 
         keys = pygame.key.get_pressed()
@@ -161,9 +168,9 @@ class Level:
     def runLoop(self):
         while self.running:
             self.delta = self.clock.tick(FPS) / 1000
+            self.render()
             self.eventLoop()
             self.update()
-            self.render()
 
     """
     render loop, renders things onto the scren
@@ -216,6 +223,8 @@ class Level:
         self.timer -= self.delta
         if self.timer <= 0:
             self.reset()
+        if round(self.timer) % 2 == 0:
+            self.clockLoopAudio.set_volume(self.clockLoopAudio.get_volume() * 2)
         if self.collisionTypes["bottom"]:
             self.airTimer = 0
         else:
@@ -331,6 +340,7 @@ class Level:
                 if self.health == 0:
                     self.reset()
                 self.moveVel = 0
+                self.enemyAttackAudio.play()
 
         
 
@@ -366,11 +376,13 @@ class Level:
             self.enemies.remove(self.enemies[collisionIndex])
             self.timer += 5
             self.data["coins"] += 10
+            self.playerAttackAudio.play()
 
 
 
     def proceedToNextLevel(self):
         self.data["coins"] += INITIAL_TIMER - round(self.timer)
+        self.clockLoopAudio.stop()
         self.startMap()
         
         
@@ -381,6 +393,8 @@ class Level:
     """
     def reset(self):
         self.running = False
+        self.clockLoopAudio.stop()
+        self.deathAudio.play()
         with open("data/data.json", "w") as f:
             json.dump(self.data, f)
         self.sceneManager.changeScene(self.sceneManager.DeathMenu)  
