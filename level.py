@@ -5,6 +5,7 @@ from map import Map, SPAWN_TILE_X, SPAWN_TILE_Y
 from player import Player
 from tile import TileType
 from walker import Walker
+from particle import Particle
 import json
 
 
@@ -18,7 +19,7 @@ MAX_DOWN_VELOCITY = 25 * FPS
 MAX_SIDEWAY_VELOCITY = 10 * FPS
 MIN_MOVE_SPEED = 0
 TIME_TO_REACH_MAX_MOV = MAX_SIDEWAY_VELOCITY / MOVEMENT_ACCELERATION
-INITIAL_TIMER = 100
+INITIAL_TIMER = 60
 
 
 
@@ -114,6 +115,7 @@ class Level:
         self.moveVel = 0
         self.clockLoopAudio.play(loops=-1)
         self.idleTime = 0
+        self.particles = []
 
 
     
@@ -133,6 +135,7 @@ class Level:
                 if event.key == pygame.K_SPACE and self.airTimer < 0.1 * self.multijump:
                     self.jumpAudio.play()
                     self.downVel = JUMP_ACCELERATION
+                    self.createParticles(int(self.player.x + self.player.width // 2), (self.player.y + self.player.height))
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.moveVel > 0: # moving right/facing right
                     print("facing right")
@@ -178,6 +181,12 @@ class Level:
             self.eventLoop()
             self.update()
 
+
+    def createParticles(self, x, y, ranges=[7,12]):
+        for i in range(random.randint(ranges[0], ranges[1])):
+            self.particles.append(Particle(x, y))
+
+
     """
     render loop, renders things onto the scren
     """
@@ -220,9 +229,18 @@ class Level:
             self.previousPlayerImage = pygame.transform.flip(self.playerImage, True, False)
         else:
             self.screen.blit(self.previousPlayerImage, self.player.getRect().move(-self.cameraX, -self.cameraY))
+
+        for particle in self.particles:
+            if particle.lifeTimer <= 0:
+                self.particles.remove(particle)
+        for i in range(len(self.particles)):
+            particle = self.particles[i]
+            particle.lifeTimer -= self.delta
+            pygame.draw.rect(self.screen, particle.colour, pygame.Rect(particle.x - self.cameraX, particle.y - self.cameraY, particle.size, particle.size))
+            print(particle.x - self.cameraX, particle.y - self.cameraY)
         #pygame.draw.rect(self.screen, self.player.getColour(), self.player.getRect().move(-self.cameraX, -self.cameraY))
         self.levelText = self.font.render(f"Level {self.level}", True, (255,255,255,0.54))
-        self.timerText = self.font.render(f"{round(self.timer)}", True, (255,255,255,0.54))
+        self.timerText = self.font.render(f"{round(self.timer)}", True, (255,min(round(255 * (self.timer / INITIAL_TIMER)), 255), min(round(255 * (self.timer / INITIAL_TIMER)), 255),0.54))
         self.healthText = self.font.render(f"HP: {self.health}", True, (255,255,255,0.54))
         self.scoreText = self.font.render(f"Coins: {self.data['coins']}", True, (255,255,255,0.54))
         self.screen.blit(self.levelText, (0,0))
@@ -257,6 +275,10 @@ class Level:
         self.downVel = min(MAX_DOWN_VELOCITY, self.downVel + (DOWN_ACCELERATION * self.delta))
         self.player.y += self.downVel * self.delta
         self.newCollisionLogicY()
+
+        for particle in self.particles:
+            particle.x += particle.velX * self.delta
+            particle.y += particle.velY * self.delta
 
         # the following is camera physics
         self.cameraX = self.player.x - self.screen.get_width() // 2
@@ -391,16 +413,24 @@ class Level:
     def weaponCollision(self, weaponRect):
         collisionIndex = weaponRect.collidelist([enemy.getRect() for enemy in self.enemies])
         if collisionIndex != -1:
+            self.createParticles(int(self.enemies[collisionIndex].x + self.enemies[collisionIndex].width // 2), \
+                                     int(self.enemies[collisionIndex].y + self.enemies[collisionIndex].height // 2), \
+                                     ranges=[20,40]
+            )
             self.enemies[collisionIndex].alive = False
             self.enemies.remove(self.enemies[collisionIndex])
             self.timer += 5
             self.data["coins"] += 10
             self.playerAttackAudio.play()
 
+                                 
+
 
 
     def proceedToNextLevel(self):
         self.data["coins"] += INITIAL_TIMER - round(self.timer)
+        self.screen.fill((255,255,255))
+        pygame.display.flip()
         self.clockLoopAudio.stop()
         self.startMap()
         

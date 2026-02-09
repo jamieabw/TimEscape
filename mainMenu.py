@@ -11,7 +11,7 @@ class MainMenu(Menu):
         with open("data/data.json", "r") as f:
             self.highScore = json.load(f)["highestLevel"]
         self.menu.add.label(
-            "TimEscape",
+            "Just Jump",
             font_name=self.font,
             font_size=50,
             align=pygame_menu.locals.ALIGN_CENTER
