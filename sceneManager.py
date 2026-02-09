@@ -1,8 +1,5 @@
 import pygame
-"""
-the hope is that eventually a scene management system can be used to more efficiently change scenes (levels, menus) more
-fluidly without annoying repeated code
-"""
+
 class SceneManager:
     def __init__(self, initialScene, Level, MainMenu, DeathMenu, ShopMenu):
         self.Level = Level

@@ -41,4 +41,3 @@ class Walker(Enemy):
             self.x += self.vel * delta
         except IndexError:
             self.alive = False # kill it if glitches, dont have time for a proper fix for this
-            #print(int(self.y // map.TILE_SIZE) + 1, (int(self.x + self.vel + (self.width // 2)) // map.TILE_SIZE))

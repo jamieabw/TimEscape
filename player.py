@@ -1,5 +1,4 @@
 from pygame import Rect
-from tile import Tile, TileType
 
 class Player:
     def __init__(self, x: int, y: int):

@@ -25,7 +25,6 @@ class Tile:
         elif self.tileType == TileType.SPIKE:
             return self.backgroundColours
         else:
-            print(self.tileType)
             raise ValueError("Invalid tile type")
 
 

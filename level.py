@@ -1,12 +1,12 @@
 import math
 import pygame # type: ignore
 import random
+import json
 from map import Map, SPAWN_TILE_X, SPAWN_TILE_Y
 from player import Player
 from tile import TileType
 from walker import Walker
 from particle import Particle
-import json
 
 
 # constants
@@ -18,8 +18,8 @@ FRICTION_MULTIPLIER = 0.9 # yes this is hardcoded, leave me alomne
 MAX_DOWN_VELOCITY = 25 * FPS
 MAX_SIDEWAY_VELOCITY = 10 * FPS
 MIN_MOVE_SPEED = 0
-TIME_TO_REACH_MAX_MOV = MAX_SIDEWAY_VELOCITY / MOVEMENT_ACCELERATION
 INITIAL_TIMER = 60
+ENEMY_COUNT = 30
 
 
 
@@ -33,17 +33,16 @@ class Level:
             self.multijump = 4
         else:
             self.multijump = 1
+        # image loading
         self.blockImage = pygame.image.load("Assets/blockPLACEHOLDER3.png").convert_alpha()
         self.blockImage = pygame.transform.scale(self.blockImage, (Map.TILE_SIZE, Map.TILE_SIZE))
-
         self.exitImage = pygame.image.load("Assets/exitPLACEHOLDER.png").convert_alpha()
         self.exitImage = pygame.transform.scale(self.exitImage, (Map.TILE_SIZE, Map.TILE_SIZE))
         self.spikeImage = pygame.image.load("Assets/spike.png").convert_alpha()
         self.playerImage = pygame.image.load("Assets/player.png").convert_alpha()
         self.enemyImage = pygame.image.load("Assets/enemyPLACEHOLDER.png").convert_alpha()
         self.playerAttackImage = pygame.image.load("Assets/playerAttack.png")
-        
-
+        #font loading
         self.font = pygame.font.Font("Assets/ThaleahFat.ttf", 64)
         self.background = pygame.image.load("Assets/background2.png").convert_alpha()
         self.background = pygame.transform.scale(self.background, (Map.TILE_SIZE * Map.MAP_TILE_SIZE, Map.TILE_SIZE * Map.MAP_TILE_SIZE))
@@ -63,28 +62,41 @@ class Level:
         self.clock = pygame.time.Clock()
         self.startMap()
         self.runLoop()
-        #self.sceneManager.changeScene( DeathMenu )
-        #self.sceneManager.beginScene(menu=True)
+
+
+    """
+    Shows a pop up screen for 1 second displaying the level number
+    """
+    def showLevelScreen(self):
+        levelScreenText = self.font.render(f"LEVEL {self.level}", True, (255,255,255)) # level counter doesnt increment yet
+        self.screen.fill((15,15,20))
+        self.screen.blit(levelScreenText, ((self.screen.get_width() // 2) - (levelScreenText.get_width() //2), (self.screen.get_height() // 2) - levelScreenText.get_height()))
+        pygame.display.flip()
+        localTimer = 1
+        while localTimer > 0:
+            localDelta = pygame.time.Clock().tick(FPS) / 1000
+            localTimer -= localDelta
+            self.clock.tick(FPS)
+
         
 
     """
     Generate i enemies in the map
     """
 
-    def generateEnemies(self, enemyCount=25):
+    def generateEnemies(self, enemyCount=ENEMY_COUNT):
         for i in range(enemyCount):
             self.enemies.append(Walker(0,0,50,50,100,self.map.islands, self.map))
 
 
     """
-    Currently a test function, spawns enemies and checks for collisions, CHANGE THIS 
+    Renders the enemies, probably not very efficient considering its loading enemies which arent in frame aswell
     """
     def renderEnemies(self):
         for enemy in self.enemies:
             if enemy.alive:
                 enemy.movement(self.map, self.delta)
                 tempRect = pygame.Rect(enemy.x - self.cameraX, enemy.y - self.cameraY, enemy.width, enemy.height)
-                #pygame.draw.rect(self.screen, (255,255,255), tempRect)
                 self.screen.blit(self.enemyImage, (tempRect.left, tempRect.top))
 
                 
@@ -96,7 +108,6 @@ class Level:
         self.level += 1
         if self.level > self.data["highestLevel"]:
             self.data["highestLevel"] = self.level
-        self.player = Player(SPAWN_TILE_X * Map.TILE_SIZE, SPAWN_TILE_Y * Map.TILE_SIZE)
         seed = random.randint(0,10000000)
         print(f"MAP SEED: {seed}")
         self.map = Map(seed)
@@ -116,6 +127,9 @@ class Level:
         self.clockLoopAudio.play(loops=-1)
         self.idleTime = 0
         self.particles = []
+        self.player = Player(SPAWN_TILE_X * Map.TILE_SIZE, SPAWN_TILE_Y * Map.TILE_SIZE)
+        self.showLevelScreen()
+        
 
 
     
@@ -138,14 +152,11 @@ class Level:
                     self.createParticles(int(self.player.x + self.player.width // 2), (self.player.y + self.player.height))
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.moveVel > 0: # moving right/facing right
-                    print("facing right")
                     tempRect = pygame.rect.Rect((self.player.x + self.player.width), (self.player.y), self.player.width * 1.5, self.player.height)
                     self.screen.blit(self.playerAttackImage, (tempRect.x - self.cameraX, tempRect.y - self.cameraY))
                     self.weaponCollision(tempRect)
                     pygame.display.flip()
-                    print(tempRect.x, tempRect.y)
                 elif self.moveVel < 0: # moving left / facing left
-                    print("facing left")
                     tempRect = pygame.rect.Rect((self.player.x -  (self.player.width)), (self.player.y), self.player.width * 1.5, self.player.height)
                     self.screen.blit(self.playerAttackImage, (tempRect.x - self.cameraX, tempRect.y - self.cameraY))
                     self.weaponCollision(tempRect)
@@ -168,20 +179,20 @@ class Level:
             elif self.moveVel < 0:
                 self.moveVel = min(0, self.moveVel * FRICTION_MULTIPLIER * self.delta * FPS)
 
-# idea for the weapon, create a rect and check for intersections
-
-
     """
     the game loop, the order of which functions are called 
     """
     def runLoop(self):
         while self.running:
             self.delta = self.clock.tick(FPS) / 1000
+            self.update()
             self.render()
             self.eventLoop()
-            self.update()
 
 
+    """
+    Creates a random amount of particles (white rects of varying sizes which despawn)
+    """
     def createParticles(self, x, y, ranges=[7,12]):
         for i in range(random.randint(ranges[0], ranges[1])):
             self.particles.append(Particle(x, y))
@@ -197,7 +208,7 @@ class Level:
         endX   = min(int((self.cameraX + self.screen.get_width()) // (Map.TILE_SIZE - 1)) + 1, 100)
         startY = min(int(self.cameraY // Map.TILE_SIZE), 100)
         endY   = min(int((self.cameraY + self.screen.get_height()) // (Map.TILE_SIZE)) + 1, 100)
-        # utilise above variables to optimise enemy spawning
+        # utilise above variables to optimise enemy spawning asp
         self.renderEnemies()
 
         for y in range(startY, endY):
@@ -205,17 +216,12 @@ class Level:
                 tempRect = self.map.mapGrid[y][x].getRect()
                 tempRect.x -= (self.cameraX)
                 tempRect.y -= (self.cameraY)
-                #pygame.draw.rect(self.screen, self.map.mapGrid[y][x].getColour(), tempRect)
                 if self.map.mapGrid[y][x].tileType.name == "BLOCK":
                     self.screen.blit(pygame.transform.flip(self.blockImage, (y * x + x) % 2, (x * y * x ** 2) % 2), (tempRect.x, tempRect.y))
-                    
                 elif self.map.mapGrid[y][x].tileType.name == "SPIKE":
-                    #pygame.draw.rect(self.screen, self.map.mapGrid[y][x].getColour(), tempRect)
                     self.screen.blit(self.spikeImage, (tempRect.x - 10, tempRect.y - 10)) # 10 makes it visually easier for player
                 elif self.map.mapGrid[y][x].tileType.name == "EXIT":
                     self.screen.blit(self.exitImage, (tempRect.x, tempRect.y))
-                """else:
-                    pygame.draw.rect(self.screen, self.map.mapGrid[y][x].getColour(), tempRect)"""
         if self.moveVel < 0.5 * FPS and self.moveVel > -0.5 * FPS:
             self.idleTime += self.delta
             idleOffset = math.sin(self.idleTime * 3) # causes player to breathe when idle
@@ -237,16 +243,15 @@ class Level:
             particle = self.particles[i]
             particle.lifeTimer -= self.delta
             pygame.draw.rect(self.screen, particle.colour, pygame.Rect(particle.x - self.cameraX, particle.y - self.cameraY, particle.size, particle.size))
-            print(particle.x - self.cameraX, particle.y - self.cameraY)
-        #pygame.draw.rect(self.screen, self.player.getColour(), self.player.getRect().move(-self.cameraX, -self.cameraY))
         self.levelText = self.font.render(f"Level {self.level}", True, (255,255,255,0.54))
         self.timerText = self.font.render(f"{round(self.timer)}", True, (255,min(round(255 * (self.timer / INITIAL_TIMER)), 255), min(round(255 * (self.timer / INITIAL_TIMER)), 255),0.54))
         self.healthText = self.font.render(f"HP: {self.health}", True, (255,255,255,0.54))
         self.scoreText = self.font.render(f"Coins: {self.data['coins']}", True, (255,255,255,0.54))
         self.screen.blit(self.levelText, (0,0))
         self.screen.blit(self.timerText, (self.screen.get_width() //2, 0))
-        self.screen.blit(self.healthText, (0, self.screen.get_height() - self.healthText.get_height()))
-        self.screen.blit(self.scoreText, (0, self.screen.get_height() - self.healthText.get_height() - self.scoreText.get_height()))
+        self.screen.blit(self.healthText, (self.screen.get_width() - self.healthText.get_width(), self.healthText.get_height()))
+        self.screen.blit(self.scoreText, (self.screen.get_width() - self.scoreText.get_width(), self.healthText.get_height() - self.scoreText.get_height()))
+        # would probably look much nicer to store the texts in an array and loop them instead
         pygame.display.flip()
     
     """
@@ -260,8 +265,6 @@ class Level:
         self.timer -= self.delta
         if self.timer <= 0:
             self.reset()
-        if round(self.timer) % 2 == 0:
-            self.clockLoopAudio.set_volume(self.clockLoopAudio.get_volume() * 2)
         if self.collisionTypes["bottom"]:
             self.airTimer = 0
         else:
@@ -347,8 +350,7 @@ class Level:
 
             elif tile.tileType.name == "EXIT":
                 self.proceedToNextLevel()
-                self.player.x, self.player.y = (SPAWN_TILE_X * Map.TILE_SIZE,SPAWN_TILE_Y* Map.TILE_SIZE) # fixes jumping to double increment level
-
+                return
 
     """
     Handles enemy collisions with the player, reduces health and check whether the player is now dead
@@ -359,7 +361,6 @@ class Level:
         for enemy in self.enemies:
             if self.player.getRect().colliderect(enemy.getRect()):
                 if self.moveVel < 0.5 * FPS and self.moveVel > -0.5 * FPS:
-                    print(self.moveVel)
                     if enemy.vel > 0: # enemy moving right
                         self.player.x = enemy.x + enemy.width + 32
                         self.collisionTypes["left"] = True
@@ -407,8 +408,7 @@ class Level:
 
             elif tile.tileType.name == "EXIT":
                 self.proceedToNextLevel()
-                self.player.x, self.player.y = (SPAWN_TILE_X * Map.TILE_SIZE,SPAWN_TILE_Y* Map.TILE_SIZE) # fixes jumping to double increment level
-
+                return
 
     def weaponCollision(self, weaponRect):
         collisionIndex = weaponRect.collidelist([enemy.getRect() for enemy in self.enemies])
@@ -423,19 +423,12 @@ class Level:
             self.data["coins"] += 10
             self.playerAttackAudio.play()
 
-                                 
-
-
-
     def proceedToNextLevel(self):
         self.data["coins"] += INITIAL_TIMER - round(self.timer)
         self.screen.fill((255,255,255))
         pygame.display.flip()
         self.clockLoopAudio.stop()
         self.startMap()
-        
-        
-
 
     """
     when player dies to spike or entity, reset everything

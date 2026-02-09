@@ -4,7 +4,7 @@ from island import Island
 from random import randrange, randint, choice, seed
 
 
-X_TILES_GAP = 4 # maximum 14 tiles away x
+X_TILES_GAP = 4 
 Y_TILES_GAP = 3
 SPAWN_TILE_X = 1
 SPAWN_TILE_Y = 97
@@ -54,7 +54,7 @@ class Map:
                         if randint(0,2) == 1:
                             continue
                     """
-                    CRITICAL BUG HERE INVOLVING INDEX OUT OF BOUNDS
+                    CRITICAL BUG HERE INVOLVING INDEX OUT OF BOUNDS - fixed?
                     """
                     try:
                         self.mapGrid[y][x].tileType = TileType.BLOCK
@@ -78,9 +78,6 @@ class Map:
                     break
                 except IndexError:
                     break
-    
-
-
 
     """
     Generates random islands to fill the empty space in the map, some may be unreachable by the player
@@ -101,11 +98,6 @@ class Map:
                 if not any(self.intersects(island, other) for other in self.islands):
                     self.islands.append(island)
                     break
-
-
-        
-
-
         
     """
     Generates an island based on a previous island to ensure a reachable path is created for the player
@@ -143,18 +135,14 @@ class Map:
             raise IndexError
         if island.y + (island.height / 2) >= Map.MAP_TILE_SIZE * Map.TILE_SIZE or island.y - (island.height / 2) <= 0:
             raise IndexError
-        
-
         return island
-
-
 
     """
     Check if two objects are intersecting
     """
     def intersects(self, a, b, paddingTiles=2):
         pad = paddingTiles * Map.TILE_SIZE
-
+        # :|
         return not (
             a.x + a.width + pad <= b.x - pad or
             a.x - pad >= b.x + b.width + pad or
@@ -183,12 +171,8 @@ class Map:
         topOfIsland = finalIsland.y - (finalIsland.height // 2)
         x = finalIsland.x // Map.TILE_SIZE
         y = topOfIsland // Map.TILE_SIZE
-        print(finalIsland.x, finalIsland.y)
-        print(topOfIsland, y, x)
         self.mapGrid[int(y-1)][int(x)].tileType = TileType.EXIT
 
-
-        
 
     """
     debugging function to print out the grid in terminal
@@ -202,8 +186,6 @@ class Map:
             result += f"{tempRow}" + "\n"
         return result
     
-
-
 
 if __name__ == "__main__":
     map = Map()

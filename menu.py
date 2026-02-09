@@ -8,11 +8,9 @@ class Menu:
         self.customTheme.widget_font_color = (220, 220, 220)
         self.customTheme.widget_selection_color = (100, 100, 255)
         self.customTheme.title = False
-
         self.font = pygame_menu.font.FONT_8BIT
         self.customTheme.title_font = self.font
         self.customTheme.widget_font = self.font
-
         self.customTheme.widget_font_size = 30
         self.customTheme.title_font_size = 50
         self.screen = sceneManager.screen
