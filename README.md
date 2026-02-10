@@ -1,7 +1,6 @@
 # No time to explain.. Just Jump!
 
-A fast-paced platformer with infinite, randomly generated levels and brutal time pressure.
-Climb as high as you can before the clock or the enemies kill you.
+A fast paced, challenging platformer with infinite, randomly generated levels and brutal time pressure. Race to the exit portal, gain coins to buy abilities, and defeat enemies to earn the extra seconds you need to survive.
 
 ---
 
