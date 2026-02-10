@@ -7,7 +7,9 @@ class Walker(Enemy):
     def __init__(self, x, y, width, height, health, islands, map):
         super().__init__(x, y, width, height, health)
         island = self.getSpawnIsland(islands, map)
-        
+        while island.hasEnemy:
+            island = self.getSpawnIsland(islands, map)
+        island.hasEnemy = True
         self.x = island.x
         self.y = island.y - self.height - (island.height // 2)
         tileTop = int((island.y - (island.height // 2)) // map.TILE_SIZE)

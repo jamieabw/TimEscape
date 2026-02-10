@@ -10,14 +10,8 @@ class MainMenu(Menu):
         super().__init__(sceneManager)
         with open("../data/data.json", "r") as f:
             self.highScore = json.load(f)["highestLevel"]
-        self.menu.add.label(
-            "Just Jump",
-            font_name=self.font,
-            font_size=50,
-            align=pygame_menu.locals.ALIGN_CENTER
-        )
+        self.menu.add.label("Just Jump", font_name=self.font, font_size=50, align=pygame_menu.locals.ALIGN_CENTER)
         self.menu.add.label(f"High score  {self.highScore}")
-
         self.menu.add.vertical_margin(80)
         self.menu.add.button('Play', self.startLevel)
         self.menu.add.button('Shop', self.startShop)

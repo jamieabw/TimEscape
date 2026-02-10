@@ -37,7 +37,6 @@ class Map:
             self.mapGrid[i][0].tileType = TileType.BLOCK
             self.mapGrid[i][Map.MAP_TILE_SIZE-1].tileType = TileType.BLOCK
 
-        #self.mapGrid[Map.MAP_TILE_SIZE - 2][Map.MAP_TILE_SIZE - 2].tileType = TileType.EXIT
         self.populateWithIslands()
         self.generateExit()
         self.fillAmbientIslands()
@@ -48,14 +47,9 @@ class Map:
             endTileY = int((island.y + (island.height // 2))  // Map.TILE_SIZE)#
             for y in range(startTileY, endTileY):
                 for x in range(startTileX, endTileX):
-                    if x <= 2 or y >= Map.MAP_TILE_SIZE - 2 or x >= Map.MAP_TILE_SIZE - 2 or y <= 2:
-                        continue # temp fix for bug involving being trapped inside spawn island
                     if x == startTileX or x == endTileX - 1  or y == endTileY - 1:
                         if randint(0,2) == 1:
                             continue
-                    """
-                    CRITICAL BUG HERE INVOLVING INDEX OUT OF BOUNDS - fixed?
-                    """
                     try:
                         self.mapGrid[y][x].tileType = TileType.BLOCK
                     except IndexError:
@@ -96,8 +90,9 @@ class Map:
 
                 island = Island(x, y, width, height)
                 if not any(self.intersects(island, other) for other in self.islands):
-                    self.islands.append(island)
-                    break
+                    if island.x + island.width < 6300 and island.x - island.width > 80:
+                        self.islands.append(island)
+                        break
         
     """
     Generates an island based on a previous island to ensure a reachable path is created for the player
@@ -106,7 +101,7 @@ class Map:
         xGap = (X_TILES_GAP + (randrange(4, 9) / 10)) * Map.TILE_SIZE
         yGap = (Y_TILES_GAP + (randrange(4, 9) / 10)) * Map.TILE_SIZE
 
-        direction = choice([-1, 1, 1, 1, 1])
+        direction = choice([-1, -1, 1, 1, 1])
 
         width = randint(4, 8) * Map.TILE_SIZE
         height = randint(4, 6) * Map.TILE_SIZE
@@ -117,7 +112,7 @@ class Map:
             + direction * xGap
         )
 
-        # top-to-top spacing
+        # top2top spacing
         prevTop = prevIsland.y - (prevIsland.height // 2)
         newTop = prevTop - yGap
         newY = newTop + (height // 2)

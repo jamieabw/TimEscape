@@ -68,7 +68,7 @@ class Level:
     Shows a pop up screen for 1 second displaying the level number
     """
     def showLevelScreen(self):
-        levelScreenText = self.font.render(f"LEVEL {self.level}", True, (255,255,255)) # level counter doesnt increment yet
+        levelScreenText = self.font.render(f"LEVEL {self.level}", True, (255,255,255))
         self.screen.fill((15,15,20))
         self.screen.blit(levelScreenText, ((self.screen.get_width() // 2) - (levelScreenText.get_width() //2), (self.screen.get_height() // 2) - levelScreenText.get_height()))
         pygame.display.flip()
@@ -138,7 +138,6 @@ class Level:
     """
     def eventLoop(self):
         
-        #self.checkCollision()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -273,11 +272,11 @@ class Level:
         self.enemyAcceleration *= FRICTION_MULTIPLIER
 
         self.player.x += self.moveVel * self.delta
-        self.newCollisionLogicX()
+        self.collisionLogicX()
 
         self.downVel = min(MAX_DOWN_VELOCITY, self.downVel + (DOWN_ACCELERATION * self.delta))
         self.player.y += self.downVel * self.delta
-        self.newCollisionLogicY()
+        self.collisionLogicY()
 
         for particle in self.particles:
             particle.x += particle.velX * self.delta
@@ -331,7 +330,7 @@ class Level:
     """
     deals with collisions on the x-axis
     """
-    def newCollisionLogicX(self):
+    def collisionLogicX(self):
         self.enemyCollisionLogicX()
         self.collisionTypes["left"] = False
         self.collisionTypes["right"] = False
@@ -390,7 +389,7 @@ class Level:
     """
     deals with collisions on the y-axis
     """
-    def newCollisionLogicY(self):
+    def collisionLogicY(self):
         self.collisionTypes["top"] = False
         self.collisionTypes["bottom"] = False
         for tile in self.getTilesToCheck():
